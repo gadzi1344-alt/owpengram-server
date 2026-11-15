@@ -553,6 +553,7 @@ func (s *Service) GiveStarGift(ctx context.Context, req GiveStarGiftRequest) (Co
 			ModelAttributeID:    req.ModelAttributeID,
 			PatternAttributeID:  req.PatternAttributeID,
 			BackdropAttributeID: req.BackdropAttributeID,
+			Date:                int(s.now().Unix()),
 		}); err != nil {
 			return CommandResult{}, err
 		}
