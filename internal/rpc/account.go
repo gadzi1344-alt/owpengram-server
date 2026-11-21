@@ -1864,9 +1864,29 @@ func (r *Router) domainUserEmojiStatus(ctx context.Context, userID int64, input 
 		}
 		return value, nil
 	case *tg.InputEmojiStatusCollectible:
-		// telesrv has no Star Gifts, so no account can ever own the collectible
-		// this would reference.
-		return domain.UserEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+if r.deps.Gifts == nil {
+return domain.UserEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+}
+gift, found, err := r.deps.Gifts.UniqueByID(ctx, status.CollectibleID)
+if err != nil {
+return domain.UserEmojiStatus{}, internalErr()
+}
+if !found || gift.Burned || gift.OwnerAddress != "" ||
+gift.Owner.Type != domain.PeerTypeUser || gift.Owner.ID != userID {
+return domain.UserEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+}
+collectible, ok := domain.CollectibleEmojiStatus(gift)
+if !ok {
+return domain.UserEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+}
+value := domain.UserEmojiStatus{DocumentID: collectible.DocumentID, Collectible: collectible}
+if until, ok := status.GetUntil(); ok {
+value.Until = until
+}
+if !value.Valid() {
+return domain.UserEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+}
+return value, nil
 	default:
 		return domain.UserEmojiStatus{}, inputConstructorInvalidErr()
 	}
